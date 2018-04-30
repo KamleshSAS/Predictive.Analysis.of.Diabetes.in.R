@@ -1,0 +1,824 @@
+---
+title: "Predictive Analysis of Diabetes in Pima Indians"
+author: "Paul Kadota, Gabriel Meltzer, Jeff Oliver-Smith"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+d.diabetes <- read.csv("C:/Users/Paul/Documents/diabetes.csv")
+library(dplyr)
+library(ROCR)
+library(ggplot2)
+
+```
+```{r}
+
+
+###remove blood pressure = 0, bmi = 0 and glucose = 0, insulin = 0 and SkinThickness = 0
+d.diabetes <- filter(d.diabetes, (d.diabetes$BloodPressure != 0) &( d.diabetes$BMI != 0 ) & (d.diabetes$Glucose != 0) & (d.diabetes$Insulin != 0) & (d.diabetes$SkinThickness != 0))
+```
+
+```{r}
+### outcome variable is saved so we can re-enter it if needed. 
+Outcome <- d.diabetes$Outcome
+
+### remove outcome variable...since we are not doing the logistic regression right now, we do not need it. 
+
+d.diabetes <- select(d.diabetes, -c(Outcome))
+
+
+```
+```{r}
+
+### multiple linear regression with diabetes pedigree function
+multiple.lm <- lm(DiabetesPedigreeFunction ~ ., data =d.diabetes)
+summary(multiple.lm)
+```
+
+```{r}
+
+### Multiple regression for DPF ~ Glucose + Insulin
+multiple.glucoseinsulin.lm <- lm(DiabetesPedigreeFunction ~ Glucose + Insulin, data = d.diabetes)
+summary(multiple.glucoseinsulin.lm)
+
+###DPF is not associated with Glucose or Insulin. 
+
+
+```
+
+```{r}
+### single regression for DPF with glucose and DPF
+single.glucose.lm <- lm(DiabetesPedigreeFunction ~ Glucose, data = d.diabetes)
+summary(single.glucose.lm)
+```
+
+
+
+
+
+```{r}
+### Simple regression with DPF ~ Insulin
+single.insulin.lm <- lm(DiabetesPedigreeFunction ~ Insulin, data = d.diabetes)
+summary(single.insulin.lm)
+```
+
+```{r}
+### Multiple Regression with DPF ~ Glucose + BMI + Insulin
+multiple.gsi.lm <- lm(DiabetesPedigreeFunction ~ Glucose + BMI + Insulin, data = d.diabetes)
+summary(multiple.gsi.lm)
+```
+
+```{r}
+## Linear regression on outcome
+d.diabetes$Outcome <- Outcome
+multiple.outcome.lm <- lm(Outcome ~. , data = d.diabetes)
+summary(multiple.outcome.lm)
+
+```
+
+
+```{r}
+### what if we do a single regression for Outcome ~ DiabetesPedigreeFunction
+single.lm <- lm(Outcome ~ DiabetesPedigreeFunction, data = d.diabetes)
+summary(single.lm)
+ 
+```
+
+```{r}
+ d.0 <- filter(d.diabetes, d.diabetes$Outcome == 0)
+ d.1 <- filter(d.diabetes, d.diabetes$Outcome == 1)
+ 
+ test.preg <- t.test(d.0$Pregnancies, d.1$Pregnancies)
+ test.preg
+ 
+ ### is significant
+ 
+```
+
+```{r}
+test.gluc <-t.test(d.0$Glucose, d.1$Glucose)
+test.gluc
+# is significant
+```
+
+```{r}
+test.bp <- t.test(d.0$BloodPressure, d.1$BloodPressure)
+test.bp
+
+### Blood pressure is significant
+```
+```{r}
+## SkinThickness
+test.skin <- t.test(d.0$SkinThickness, d.1$SkinThickness)
+test.skin
+### significant
+```
+
+
+
+
+```{r}
+test.Insulin <- t.test(d.0$Insulin, d.1$Insulin)
+test.Insulin
+
+### Insulin is significant
+```
+
+```{r}
+test.BMI <- t.test(d.0$BMI, d.1$BMI)
+test.BMI
+
+## significant
+```
+```{r}
+test.DPF <- t.test(d.0$DiabetesPedigreeFunction, d.1$DiabetesPedigreeFunction)
+test.DPF
+
+### pretty signifiant
+```
+```{r}
+test.Age <- t.test(d.0$Age, d.1$Age)
+test.Age
+
+### age is signficant
+```
+
+```{r}
+### Logistic regression for outcome
+m.logAll <- glm(Outcome ~., family = "binomial", data = d.diabetes)
+summary(m.logAll)
+exp(coef(m.logAll))
+
+cat("\n", "************","\n")
+summary(multiple.outcome.lm)
+### change in significance for BMI
+```
+```{r}
+### what if we do a single logistic regression for Outcome ~ Pregnancies
+m.logPreg <- glm(Outcome ~ Pregnancies, family ="binomial", data = d.diabetes)
+summary(m.logPreg)
+
+## previously significant at 0.1161421 (pvalue 0.000534)
+exp(coef(m.logPreg)) 
+```
+
+```{r}
+### what if we do a single logistic regression for Outcome ~ Glucose
+m.logGluc <- glm(Outcome ~ Glucose, family ="binomial", data = d.diabetes)
+summary(m.logGluc)
+### previously significant at 0.0369205 (pvalue <2e-16)
+ exp(coef(m.logGluc))
+```
+
+```{r}
+### what if we do a single logistic regression for Outcome ~ BloodPressure
+m.logBP <- glm(Outcome ~ BloodPressure, family ="binomial", data = d.diabetes)
+summary(m.logBP)
+### previously insignificant at -0.00105277 (pvalue 0.227170)
+## now significant at 0.006613 with pvalue 1.043e-05
+exp(coef(m.logBP))
+```
+```{r}
+### what if we do a single logistic regression for Outcome ~ Insulin
+m.logInsu <- glm(Outcome ~ Insulin, family ="binomial", data = d.diabetes)
+summary(m.logInsu)
+### currently insignificant at -0.0011161 (pvalue 0.187942)
+### now significant at 0.0025328 (pvalue 0.000153)
+ exp(coef(m.logInsu))
+```
+
+```{r}
+### what if we do a single logistic regression for Outcome ~ BMI
+m.BMI <- glm(Outcome ~ BMI, family ="binomial", data = d.diabetes)
+summary(m.BMI)
+### currently significant at 0.0944186 (pvalue 4.16e-09)
+### now at 0.09783 (pvalue 2.65e-14)
+exp(coef(m.BMI))
+ 
+```
+
+```{r}
+### what if we do a single logistic regression for Outcome ~ Age
+m.logAge <- glm(Outcome ~ Age, family ="binomial", data = d.diabetes)
+summary(m.logAge)
+exp(coef(m.logAge))
+### currently insignificant at 0.0159550 (pvalue 0.105241)
+ ### now significant at 0.0068086 (pvalue 1.77e-10)
+
+```
+
+```{r}
+### what if we do a single logistic regression for Outcome ~ DiabetesPedigreeFunction?
+m.logDPF <- glm(Outcome ~ DiabetesPedigreeFunction, family ="binomial", data = d.diabetes)
+summary(m.logDPF)
+ exp(coef(m.logDPF))
+```
+
+```{r}
+m.bmiGluc <- lm(BMI ~ Glucose, data = d.diabetes)
+summary (m.bmiGluc)
+
+
+### linear regression
+```
+
+```{r}
+cor(d.diabetes$BMI, d.diabetes$Glucose)
+
+### correlation isn't high. 
+
+plot(d.diabetes$BMI, d.diabetes$Glucose, xlab="BMI", ylab="Glucose")
+```
+
+```{r}
+### attempt to fit a linear regression line to the data
+ggplot(data= d.diabetes, aes(y=Glucose, x = BMI ) ) +geom_point(shape= 1) + geom_smooth(method=lm)
+```
+```{r}
+### Below is code to draw a graph of logistic regression of Outcome ~ .
+plot(d.diabetes$Glucose +d.diabetes$BMI + d.diabetes$DiabetesPedigreeFunction , d.diabetes$Outcome, main="Significant Predictor Variables (Logistic Regression) vs. Outcome", xlab="PredictorVariables", ylab="Outcome")
+### logistic regression model 
+g=glm(Outcome~Glucose + BMI+DiabetesPedigreeFunction, data = d.diabetes, family="binomial")
+curve(predict(g ,data.frame(Glucose=x, BMI= x,    DiabetesPedigreeFunction = x), type="resp"), add=TRUE)
+points(d.diabetes$Glucose+d.diabetes$BMI +  d.diabetes$DiabetesPedigreeFunction, fitted(g), pch=18)
+
+
+```
+
+```{r}
+### Below is code to draw a graph of logistic regression of Outcome ~ .
+plot(d.diabetes$Glucose +d.diabetes$BMI + d.diabetes$DiabetesPedigreeFunction , d.diabetes$Outcome, main="Significant Predictor Variables(Linear Regression) vs. Outcome", xlab="PredictorVariables", ylab="Outcome")
+### logistic regression model 
+g=lm(Outcome~Glucose + BMI+DiabetesPedigreeFunction, data = d.diabetes)
+curve(predict(g ,data.frame(Glucose=x, BMI= x,   DiabetesPedigreeFunction = x), type="resp"), add=TRUE)
+points(d.diabetes$Glucose+d.diabetes$BMI +  d.diabetes$DiabetesPedigreeFunction, fitted(g), pch=18)
+
+
+```
+
+```{r}
+
+### 4 fold cross validation. The number of samples we have divides evenly into 4. This is done on a logistic regression with all the variables. 
+indices.all <- sample(nrow(d.diabetes), replace = FALSE)
+k =4
+### think about changing kvalue
+delta = nrow(d.diabetes) / k 
+indices.cutoff <- seq(1, nrow(d.diabetes), by =delta)
+
+indices.1 <- indices.all[indices.cutoff[1]:(indices.cutoff[2] -1)]
+indices.2 <- indices.all[indices.cutoff[2]: (indices.cutoff[3] -1)]
+indices.3 <- indices.all[indices.cutoff[3]: (indices.cutoff[4] -1)]
+indices.4 <- indices.all[indices.cutoff[4]: nrow(d.diabetes)]
+
+dfold1 <- d.diabetes[indices.1,]
+dfold2 <- d.diabetes[indices.2,]
+dfold3 <- d.diabetes[indices.3,]
+dfold4 <- d.diabetes[indices.4,]
+
+### fold1 ###
+d.trainR1 <- rbind(dfold2, dfold3, dfold4)
+d.testR1 <- dfold1
+
+m1.glm <- glm(Outcome ~., family="binomial", data=d.trainR1)
+y <- d.testR1$Outcome
+d.testR1 <- select(d.testR1, -c(Outcome))
+yhat <- predict.glm(m1.glm,newdata =d.testR1, type = "response")
+d.testR1$pred_prob <- yhat 
+d.testR1$actual_labels <- y
+
+# Call ROCR object
+pred.obj <- prediction(predictions = d.testR1$pred_prob, labels =d.testR1$actual_labels)
+roc.perf <- performance(pred.obj, measure = "tpr", x.measure = "fpr")
+
+plot(roc.perf)
+abline (0,1)
+
+
+# Get  AUC
+auc.perf <- performance(pred.obj, measure = "auc")
+auc.1 <- unlist(auc.perf@y.values)
+cat("AUC for fold 1: ", auc.1, "\n")
+
+### Fold 2 ######
+d.trainR2 <- rbind(dfold1, dfold3,dfold4)
+d.testR2 <- dfold2
+
+m2.glm <- glm(Outcome ~., family="binomial", data = d.trainR2)
+y <- d.testR2$Outcome
+d.testR2 <- select(d.testR2, -c(Outcome))
+yhat <- predict.glm(m2.glm, newdata =d.testR2, type = "response")
+d.testR2$pred_prob <- yhat
+d.testR2$actual_labels <- y
+
+# Call ROCR object
+pred.obj <- prediction(predictions = d.testR2$pred_prob, labels =d.testR2$actual_labels)
+roc.perf <- performance(pred.obj, measure = "tpr", x.measure = "fpr")
+
+plot(roc.perf)
+abline (0,1)
+
+
+# Get  AUC 
+auc.perf <- performance(pred.obj, measure = "auc")
+auc.2 <- unlist(auc.perf@y.values)
+cat("AUC for fold 2: ", auc.2, "\n")
+
+#### Fold 3 ###
+d.trainR3 <- rbind(dfold1, dfold2, dfold4)
+d.testR3 <- dfold3
+
+m3.glm <- glm(Outcome ~., family = "binomial", data = d.trainR3)
+y <-d.testR3$Outcome
+d.testR3 <- select(d.testR3, -c(Outcome))
+yhat <- predict.glm(m3.glm, newdata = d.testR3, type = "response")
+d.testR3$pred_prob <- yhat
+d.testR3$actual_labels <- y
+
+# Call ROCR Object
+pred.obj <- prediction(predictions = d.testR3$pred_prob, labels = d.testR3$actual_labels)
+roc.perf <- performance(pred.obj, measure = "tpr", x.measure ="fpr")
+plot(roc.perf)
+abline(0,1)
+
+# Get AUC
+auc.perf <-performance(pred.obj, measure = "auc")
+auc.3 <- unlist(auc.perf@y.values)
+cat("AUC for fold 3: ", auc.3, "\n")
+
+####### Fold 4 ####
+d.trainR4 <- rbind (dfold1, dfold2, dfold3)
+d.testR4 <- dfold4
+m4.glm <- glm(Outcome ~., family = "binomial", data = d.trainR4)
+y<-d.testR4$Outcome
+d.testR4 <- select(d.testR4, -c(Outcome))
+yhat <- predict.glm(m4.glm, newdata = d.testR4, type = "response")
+d.testR4$pred_prob <- yhat
+d.testR4$actual_labels <- y
+
+# Call ROCR Object
+pred.obj <- prediction(predictions = d.testR4$pred_prob, labels  = d.testR4$actual_labels)
+roc.perf <- performance(pred.obj, measure = "tpr", x.measure = "fpr")
+plot(roc.perf)
+abline(0,1)
+
+#Get AUC
+auc.perf <- performance(pred.obj, measure = "auc")
+auc.4 <- unlist(auc.perf@y.values)
+cat("AUC for fold 4:", auc.4, "\n")
+
+auc.average <-  (auc.1 + auc.2 +auc.3 +auc.4)/4
+cat("Average AUC: ", auc.average, "\n")
+
+```
+```{r}
+
+### this tries 4-fold cross-validation for a = logistic regression based on BMI, Glucose, DiabetesPedigreeFunction, all of which are somewhat significant
+### don't select new indices.... compare against the exact same samples as before
+### fold1 ###
+d.trainR1 <- rbind(dfold2, dfold3, dfold4)
+d.testR1 <- dfold1
+
+m1.glm <- glm(Outcome ~Glucose+ BMI + DiabetesPedigreeFunction , family="binomial", data=d.trainR1)
+y <- d.testR1$Outcome
+d.testR1 <- select(d.testR1, -c(Outcome))
+yhat <- predict.glm(m1.glm,newdata =d.testR1, type = "response")
+d.testR1$pred_prob <- yhat 
+d.testR1$actual_labels <- y
+
+# Call ROCR object
+pred.obj <- prediction(predictions = d.testR1$pred_prob, labels =d.testR1$actual_labels)
+roc.perf <- performance(pred.obj, measure = "tpr", x.measure = "fpr")
+
+plot(roc.perf)
+abline (0,1)
+
+
+# Get  AUC
+auc.perf <- performance(pred.obj, measure = "auc")
+auc.1 <- unlist(auc.perf@y.values)
+cat("AUC for fold 1: ", auc.1, "\n")
+
+### Fold 2 ######
+d.trainR2 <- rbind(dfold1, dfold3,dfold4)
+d.testR2 <- dfold2
+
+m2.glm <- glm(Outcome ~Glucose + Pregnancies + BMI + DiabetesPedigreeFunction , family="binomial", data = d.trainR2)
+y <- d.testR2$Outcome
+d.testR2 <- select(d.testR2, -c(Outcome))
+yhat <- predict.glm(m2.glm, newdata =d.testR2, type = "response")
+d.testR2$pred_prob <- yhat
+d.testR2$actual_labels <- y
+
+# Call ROCR object
+pred.obj <- prediction(predictions = d.testR2$pred_prob, labels =d.testR2$actual_labels)
+roc.perf <- performance(pred.obj, measure = "tpr", x.measure = "fpr")
+
+plot(roc.perf)
+abline (0,1)
+
+
+# Get  AUC 
+auc.perf <- performance(pred.obj, measure = "auc")
+auc.2 <- unlist(auc.perf@y.values)
+cat("AUC for fold 2: ", auc.2, "\n")
+
+#### Fold 3 ###
+d.trainR3 <- rbind(dfold1, dfold2, dfold4)
+d.testR3 <- dfold3
+
+m3.glm <- glm(Outcome ~Glucose + Pregnancies + BMI + DiabetesPedigreeFunction , family = "binomial", data = d.trainR3)
+y <-d.testR3$Outcome
+d.testR3 <- select(d.testR3, -c(Outcome))
+yhat <- predict.glm(m3.glm, newdata = d.testR3, type = "response")
+d.testR3$pred_prob <- yhat
+d.testR3$actual_labels <- y
+
+# Call ROCR Object
+pred.obj <- prediction(predictions = d.testR3$pred_prob, labels = d.testR3$actual_labels)
+roc.perf <- performance(pred.obj, measure = "tpr", x.measure ="fpr")
+plot(roc.perf)
+abline(0,1)
+
+# Get AUC
+auc.perf <-performance(pred.obj, measure = "auc")
+auc.3 <- unlist(auc.perf@y.values)
+cat("AUC for fold 3: ", auc.3, "\n")
+
+####### Fold 4 ####
+d.trainR4 <- rbind (dfold1, dfold2, dfold3)
+d.testR4 <- dfold4
+m4.glm <- glm(Outcome ~Glucose + Pregnancies + BMI + DiabetesPedigreeFunction , family = "binomial", data = d.trainR4)
+y<-d.testR4$Outcome
+d.testR4 <- select(d.testR4, -c(Outcome))
+yhat <- predict.glm(m4.glm, newdata = d.testR4, type = "response")
+d.testR4$pred_prob <- yhat
+d.testR4$actual_labels <- y
+# Call ROCR Object
+pred.obj <- prediction(predictions = d.testR4$pred_prob, labels  = d.testR4$actual_labels)
+roc.perf <- performance(pred.obj, measure = "tpr", x.measure = "fpr")
+plot(roc.perf)
+abline(0,1)
+
+#Get AUC
+auc.perf <- performance(pred.obj, measure = "auc")
+auc.4 <- unlist(auc.perf@y.values)
+cat("AUC for fold 4:", auc.4, "\n")
+
+auc.average <-  (auc.1 + auc.2 +auc.3 +auc.4)/4
+cat("Average AUC: ", auc.average, "\n")
+
+
+```
+```{r}
+### This is four-fold cross-validation for a LINEAR regression on all variables,... again the same divisions and indices are used so that we compare the same samples.k
+
+### fold1 ###
+d.trainR1 <- rbind(dfold2, dfold3, dfold4)
+d.testR1 <- dfold1
+
+m1.lm <- lm(Outcome ~., data=d.trainR1)
+y <- d.testR1$Outcome
+d.testR1 <- select(d.testR1, -c(Outcome))
+yhat <- predict.glm(m1.glm,newdata =d.testR1, type = "response")
+d.testR1$pred_prob <- yhat 
+d.testR1$actual_labels <- y
+
+# Call ROCR object
+pred.obj <- prediction(predictions = d.testR1$pred_prob, labels =d.testR1$actual_labels)
+roc.perf <- performance(pred.obj, measure = "tpr", x.measure = "fpr")
+
+plot(roc.perf)
+abline (0,1)
+
+
+# Get  AUC
+auc.perf <- performance(pred.obj, measure = "auc")
+auc.1 <- unlist(auc.perf@y.values)
+cat("AUC for fold 1: ", auc.1, "\n")
+
+### Fold 2 ######
+d.trainR2 <- rbind(dfold1, dfold3,dfold4)
+d.testR2 <- dfold2
+
+m2.lm <- lm(Outcome ~., data = d.trainR2)
+y <- d.testR2$Outcome
+d.testR2 <- select(d.testR2, -c(Outcome))
+yhat <- predict.glm(m2.glm, newdata =d.testR2, type = "response")
+d.testR2$pred_prob <- yhat
+d.testR2$actual_labels <- y
+
+# Call ROCR object
+pred.obj <- prediction(predictions = d.testR2$pred_prob, labels =d.testR2$actual_labels)
+roc.perf <- performance(pred.obj, measure = "tpr", x.measure = "fpr")
+
+plot(roc.perf)
+abline (0,1)
+
+
+# Get  AUC 
+auc.perf <- performance(pred.obj, measure = "auc")
+auc.2 <- unlist(auc.perf@y.values)
+cat("AUC for fold 2: ", auc.2, "\n")
+
+#### Fold 3 ###
+d.trainR3 <- rbind(dfold1, dfold2, dfold4)
+d.testR3 <- dfold3
+
+m3.lm <- lm(Outcome ~., data = d.trainR3)
+y <-d.testR3$Outcome
+d.testR3 <- select(d.testR3, -c(Outcome))
+yhat <- predict.glm(m3.glm, newdata = d.testR3, type = "response")
+d.testR3$pred_prob <- yhat
+d.testR3$actual_labels <- y
+
+# Call ROCR Object
+pred.obj <- prediction(predictions = d.testR3$pred_prob, labels = d.testR3$actual_labels)
+roc.perf <- performance(pred.obj, measure = "tpr", x.measure ="fpr")
+plot(roc.perf)
+abline(0,1)
+
+# Get AUC
+auc.perf <-performance(pred.obj, measure = "auc")
+auc.3 <- unlist(auc.perf@y.values)
+cat("AUC for fold 3: ", auc.3, "\n")
+
+####### Fold 4 ####
+d.trainR4 <- rbind (dfold1, dfold2, dfold3)
+d.testR4 <- dfold4
+m4.lm <- lm(Outcome ~., data = d.trainR4)
+y<-d.testR4$Outcome
+d.testR4 <- select(d.testR4, -c(Outcome))
+yhat <- predict.glm(m4.glm, newdata = d.testR4, type = "response")
+d.testR4$pred_prob <- yhat
+d.testR4$actual_labels <- y
+
+# Call ROCR Object
+pred.obj <- prediction(predictions = d.testR4$pred_prob, labels  = d.testR4$actual_labels)
+roc.perf <- performance(pred.obj, measure = "tpr", x.measure = "fpr")
+plot(roc.perf)
+abline(0,1)
+
+#Get AUC
+auc.perf <- performance(pred.obj, measure = "auc")
+auc.4 <- unlist(auc.perf@y.values)
+cat("AUC for fold 4:", auc.4, "\n")
+
+auc.average <-  (auc.1 + auc.2 +auc.3 +auc.4)/4
+cat("Average AUC: ", auc.average, "\n")
+
+```
+
+
+# Scripts regarding data scrubbing, correlation, ttest, clustering and MDS
+
+```{r}
+rm(list=ls())
+d.diabetes <- read.csv("C:/Users/Paul/Desktop/diabetes.csv")
+library(dplyr)
+library(ROCR)
+library(ggplot2)
+```
+```{r}
+# Exploring Data with plots and summary statistics
+summary(d.diabetes)
+
+# Here we noticed that there were many ZERO values for parameters that should never be zero - glucose, BP, SkinThickness, BMI
+
+# Lets see this distribution graphically:
+# Filled Density Plot
+par(mfrow=c(2,4))
+
+p <- density(d.diabetes$Pregnancies)
+plot(p, main="Distribution of Pregnancies")
+polygon(p, col="red") 
+
+g <- density(d.diabetes$Glucose)
+plot(g, main="Distribution of Glucose")
+polygon(g, col="blue") 
+
+bp <- density(d.diabetes$BloodPressure)
+plot(bp, main="Distribution of Blood Pressure")
+polygon(bp, col="green") 
+
+i <- density(d.diabetes$Insulin)
+plot(i, main="Distribution of Insulin")
+polygon(i, col="yellow") 
+
+s <- density(d.diabetes$SkinThickness)
+plot(s, main="Distribution of Skin Thickness")
+polygon(s, col="purple") 
+
+bmi <- density(d.diabetes$BMI)
+plot(bmi, main="Distribution of BMI")
+polygon(bmi, col="black") 
+
+dpf <- density(d.diabetes$DiabetesPedigreeFunction)
+plot(dpf, main="Distribution of Diabetes Pedigree Function")
+polygon(dpf, col="orange") 
+
+a <- density(d.diabetes$Age)
+plot(a, main="Distribution of Age")
+polygon(a, col="brown") 
+
+
+```
+
+```{r}
+#remove blood pressure = 0, bmi = 0 and glucose = 0 ### Maybe we should also throw out the Insulin... Or maybe the glucose and insulin should both be included.
+d.diabetes <- filter(d.diabetes, (d.diabetes$BloodPressure != 0) &( d.diabetes$BMI != 0 ) & (d.diabetes$Glucose != 0) & (d.diabetes$Insulin != 0) & (d.diabetes$SkinThickness != 0))
+
+# redraw graphs
+par(mfrow=c(2,4))
+
+p <- density(d.diabetes$Pregnancies)
+plot(p, main="Distribution of Pregnancies")
+polygon(p, col="red") 
+
+g <- density(d.diabetes$Glucose)
+plot(g, main="Distribution of Glucose")
+polygon(g, col="blue") 
+
+bp <- density(d.diabetes$BloodPressure)
+plot(bp, main="Distribution of Blood Pressure")
+polygon(bp, col="green") 
+
+i <- density(d.diabetes$Insulin)
+plot(i, main="Distribution of Insulin")
+polygon(i, col="yellow") 
+
+s <- density(d.diabetes$SkinThickness)
+plot(s, main="Distribution of Skin Thickness")
+polygon(s, col="purple") 
+
+bmi <- density(d.diabetes$BMI)
+plot(bmi, main="Distribution of BMI")
+polygon(bmi, col="black") 
+
+dpf <- density(d.diabetes$DiabetesPedigreeFunction)
+plot(dpf, main="Distribution of Diabetes Pedigree Function")
+polygon(dpf, col="orange") 
+
+a <- density(d.diabetes$Age)
+plot(a, main="Distribution of Age")
+polygon(a, col="brown") 
+
+# removing place holder values of zeros gives data a much more normal distribution
+
+
+```
+
+```{r}
+
+# Filter data by diabetes outcome
+
+ d.0 <- filter(d.diabetes, d.diabetes$Outcome == 0)
+ d.1 <- filter(d.diabetes, d.diabetes$Outcome == 1)
+ 
+ # compare density plots of 2 groups on same plot 
+
+d1 <- density(d.0$BMI)
+d2 <- density(d.1$BMI)
+plot(range(d1$x, d2$x), range(d1$y, d2$y), main= "Distribution of BMI for Non-Diabetic and Diabetic Patients", type = "n", xlab = "x",
+ylab = "Density")
+lines(d1, col = "red")
+lines(d2, col = "blue")
+
+```
+```{r}
+
+dd1 <- density(d.0$Glucose)
+dd2 <- density(d.1$Glucose)
+plot(range(dd1$x, dd2$x), range(d1$y, d2$y), type = "n", xlab = "x",
+ylab = "Density")
+lines(d1, col = "red")
+lines(d2, col = "blue")
+
+```
+
+```{r}
+
+# Look at correlation matrix in console and with package corrplot
+
+res <- cor(d.diabetes)
+round(res, 2)
+
+par(mfrow=c(1,1)) 
+
+library(corrplot)
+corrplot(res, type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+
+```
+
+```{r}
+# K-Means Cluster Analysis
+
+# Determine ideal number of clusters
+wss <- (nrow(d.diabetes)-1)*sum(apply(d.diabetes,2,var))
+for (i in 2:15) wss[i] <- sum(kmeans(d.diabetes,
+   centers=i)$withinss)
+plot(1:15, wss, type="b", xlab="Number of Clusters",
+  ylab="Within groups sum of squares") 
+
+### Multidimensional Scaling with Kmeans cluster
+# kmeans
+library(vegan)
+ 
+kclus <- kmeans(d.diabetes,centers= 3, iter.max=1000, nstart=10000)
+d_dist <- dist(d.diabetes)
+
+## Multidimensional scaling
+cmd <- cmdscale(d_dist)
+
+# plot MDS by groups from kmeans
+groups <- levels(factor(kclus$cluster))
+ordiplot(cmd, type = "n")
+cols <- c("steelblue", "darkred", "darkgreen", "pink")
+for(i in seq_along(groups)){
+  points(cmd[factor(kclus$cluster) == groups[i], ], col = cols[i], pch = 16)
+}
+
+# add spider and hull
+ordispider(cmd, factor(kclus$cluster), label = TRUE)
+ordihull(cmd, factor(kclus$cluster), lty = "dotted")
+
+```
+
+```{r}
+
+# Ward Hierarchical Clustering
+h <- dist(d.diabetes, method = "euclidean") # distance matrix
+fit <- hclust(h, method="ward")
+plot(fit) # display dendogram
+groups <- cutree(fit, k=3) # cut tree into 5 clusters
+# draw dendogram with red borders around the 5 clusters
+rect.hclust(fit, k=3, border="red") 
+
+```
+
+
+
+
+```{r}
+d.dbmi <- read.csv("C:/Users/Paul/Desktop/diabetes.bmi.csv")
+
+mysample <- d.dbmi[sample(1:nrow(d.dbmi), 50,
+   replace=FALSE),] 
+
+# Ward Hierarchical Clustering
+row.names(mysample) <- mysample[,1] # Declare column 1 as the row names
+hh<- dist(as.matrix(mysample)) # And then your routine
+hc <- hclust(hh)
+plot(hc)
+
+```
+
+```{r}
+#### Hierarchical clustering using new variables - obesity
+
+d.dbmi.obese <- read.csv("C:/Users/Paul/Desktop/diabetes.bmi.obese.csv")
+
+mysample <- d.dbmi.obese[sample(1:nrow(d.dbmi.obese), 50,
+   replace=FALSE),] 
+
+# Ward Hierarchical Clustering
+row.names(mysample) <- mysample[,1] # Declare column 1 as the row names
+hh<- dist(as.matrix(mysample)) # And then your routine
+hc <- hclust(hh)
+plot(hc)
+
+```
+
+```{r}
+
+#### Hierarchical clustering using new variables - glucose
+
+d.dbmi.glucose <- read.csv("C:/Users/Paul/Desktop/diabetes.bmi.glucose.csv")
+
+mysample <- d.dbmi.glucose[sample(1:nrow(d.dbmi.glucose), 50,
+                                replace=FALSE),] 
+
+# Ward Hierarchical Clustering
+row.names(mysample) <- mysample[,1] # Declare column 1 as the row names
+hh<- dist(as.matrix(mysample)) # And then your routine
+hc <- hclust(hh)
+plot(hc)
+```
+
+```{r}
+
+#### Hierarchical clustering using new variables - obesity & glucose
+
+d.dbmi.glucose.BMI <- read.csv("C:/Users/Paul/Desktop/bin.combined.csv")
+
+mysample <- d.dbmi.glucose.BMI[sample(1:nrow(d.dbmi.glucose.BMI), 50,
+                                  replace=FALSE),] 
+
+# Ward Hierarchical Clustering
+row.names(mysample) <- mysample[,1] # Declare column 1 as the row names
+hh<- dist(as.matrix(mysample)) # And then your routine
+hc <- hclust(hh)
+plot(hc)
+```
