@@ -2,7 +2,7 @@
 ## Applied Research Project  
 
 ### I. Basic Analysis  
-  a. Visualizeing Data
+  a. Visualizeing Data  
   b. Removing Data (zeroes)  
   c. Summary Statistics  
   d. Correlation  
