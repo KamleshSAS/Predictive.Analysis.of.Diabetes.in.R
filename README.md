@@ -1,4 +1,4 @@
-# Predictive-Analysis-of-Diabetes
+# Predictive Analysis of Diabetes
 ## Applied Research Project  
 
 ### I. Basic Analysis  
