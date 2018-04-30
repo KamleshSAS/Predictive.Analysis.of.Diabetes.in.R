@@ -7,12 +7,14 @@ I. Basic Analysis
   c. Summary Statistics  
   d. Correlation  
   e. TTEST  
+  
 II. Regression  
   a. Logistic Regression  
   b. Predictor Variables  
   c. K-Fold X Validation  
   d. ROC  
   e. AUC  
+
 III. Clustering  
   a. Hierarchical BMI  
   b. Hierarchical Glucose  
