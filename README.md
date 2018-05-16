@@ -2,8 +2,8 @@
 ## Applied Research Project  
 
 ### I. Basic Analysis  
-  a. Visualizeing Data  
-  b. Removing Data (zeroes)  
+  a. Data Visualization 
+  b. Quality Control 
   c. Summary Statistics  
   d. Correlation  
   e. TTEST  
