@@ -2,8 +2,8 @@
 ## Applied Research Project  
 
 ### I. Basic Analysis  
-  a. Data Visualization 
-  b. Quality Control 
+  a. Data Visualization   
+  b. Quality Control   
   c. Summary Statistics  
   d. Correlation  
   e. TTEST  
