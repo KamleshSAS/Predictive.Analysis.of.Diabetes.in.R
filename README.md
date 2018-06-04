@@ -11,7 +11,7 @@
 ### II. Regression  
   a. Logistic Regression  
   b. Predictor Variables  
-  c. K-Fold X Validation  
+  c. K-Fold Cross Validation  
   d. ROC  
   e. AUC  
 
